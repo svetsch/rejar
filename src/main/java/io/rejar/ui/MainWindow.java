@@ -56,7 +56,9 @@ public final class MainWindow {
         title.getStyleClass().add("placeholder-title");
         Label hint = new Label("Open a jar with File › Open JAR… (Ctrl+O) or drop jar files here");
         hint.getStyleClass().add("placeholder-hint");
-        placeholder.getChildren().addAll(title, hint);
+        javafx.scene.image.ImageView logo = Icons.view(96);
+        logo.setOpacity(0.85);
+        placeholder.getChildren().addAll(logo, title, hint);
         placeholder.visibleProperty().bind(javafx.beans.binding.Bindings.isEmpty(jarTabs.getTabs()));
         placeholder.setMouseTransparent(true);
 
@@ -83,6 +85,7 @@ public final class MainWindow {
         applyTheme();
         stage.setScene(scene);
         stage.setTitle("ReJar - jar decompiler & patcher");
+        stage.getIcons().setAll(Icons.all());
 
         scene.setOnDragOver(e -> {
             if (e.getDragboard().hasFiles()) {
@@ -145,7 +148,7 @@ public final class MainWindow {
         MenuItem settings = item("_Settings…", null, this::openSettings);
         Menu tools = new Menu("_Tools", null, classpath, changes, new SeparatorMenuItem(), settings);
 
-        MenuItem about = item("_About", null, () -> Fx.info(stage, "ReJar",
+        MenuItem about = item("_About", null, () -> showAbout(
                 "Jar decompiler and patcher.\n\n"
                         + "• Decompiler: Vineflower\n"
                         + "• Compiler: javac (from the running JDK)\n"
@@ -156,6 +159,15 @@ public final class MainWindow {
                         + "Ctrl+click navigate to class."));
         Menu help = new Menu("_Help", null, about);
         return new MenuBar(file, navigate, tools, help);
+    }
+
+    private void showAbout(String text) {
+        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION, text);
+        alert.initOwner(stage);
+        alert.setTitle("About ReJar");
+        alert.setHeaderText("ReJar");
+        alert.setGraphic(Icons.view(64));
+        alert.showAndWait();
     }
 
     private static MenuItem item(String text, String accelerator, Runnable action) {

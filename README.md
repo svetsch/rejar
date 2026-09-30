@@ -50,6 +50,30 @@ mvn javafx:run
 
 The `-all` jar contains the JavaFX native libraries for the platform it was built on (here Windows). Build it on each target OS, or use `mvn javafx:run`.
 
+### Native executable (no Java installation needed)
+
+`jpackage` from the JDK builds a native launcher with its own Java runtime. The runtime is trimmed to Java SE plus `jdk.compiler`, so editing and recompiling still work. Build on the OS you are targeting.
+
+Portable app: `target/dist/ReJar/ReJar.exe` (Windows) or `ReJar.app` / `ReJar/bin/ReJar` (macOS / Linux), zipped as `target/dist/ReJar-<version>-<os>.zip`, about 50 MB:
+
+```bash
+mvn package -Pnative
+```
+
+Installer: `.exe` on Windows, `.deb` on Linux, `.dmg` on macOS. The Windows installer adds a Start-menu entry and a desktop shortcut, and lets you choose the install folder:
+
+```bash
+mvn package -Pinstaller
+```
+
+To pick another format, add `-Dinstaller.type=msi` (Windows), `rpm` (Linux) or `pkg` (macOS).
+
+Installers have extra requirements. On Windows you need the [WiX Toolset](https://wixtoolset.org/) 3.x on the `PATH`, since JDK 21's `jpackage` uses WiX 3. On Linux you need `dpkg-deb` for `.deb` or `rpm-build` for `.rpm`. The portable app has no extra requirements.
+
+Resolving dependencies with Maven still calls an installed `mvn` (see *Tools › Settings*), and that `mvn` needs its own Java.
+
+The packaging icons in `src/packaging/` (`.ico`, `.icns`, `.png`) are generated with `java tools/IconGen.java src/main/resources/io/rejar/ui/icons src/packaging`.
+
 ## Limitations
 
 - Decompiled code does not always recompile as-is (a known limit of every decompiler). When that happens, fix the reported errors in the editor.
@@ -64,4 +88,7 @@ io.rejar.core   JarModel (original entries plus pending overlay), DecompilerServ
                 History / HistoryStore, SearchService, TextSupport
 io.rejar.ui     MainWindow, JarTab, EntryTree, ClassEditorTab, ResourceTab, CodeEditor + Highlighter,
                 SearchPane, ChangesPane, CompareTab and dialogs
+tools/IconGen   draws the application icon (src/main/resources/io/rejar/ui/icons/rejar-<size>.png)
+                and the jpackage icons (src/packaging/rejar.ico|icns|png)
+src/packaging   jpackage icons and the assembly descriptor zipping the portable app
 ```

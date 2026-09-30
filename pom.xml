@@ -21,6 +21,22 @@
         <gson.version>2.14.0</gson.version>
         <junit.version>5.11.4</junit.version>
         <main.class>io.rejar.Launcher</main.class>
+
+        <!-- native packaging (jpackage): mvn package -Pnative  /  mvn package -Pinstaller -->
+        <app.name>ReJar</app.name>
+        <app.vendor>ReJar</app.vendor>
+        <app.description>Jar decompiler and patcher</app.description>
+        <!-- runtime bundled with the executable: Java SE + the compiler used to recompile edited classes -->
+        <jpackage.modules>java.se,jdk.compiler,jdk.unsupported,jdk.charsets,jdk.zipfs,jdk.jfr</jpackage.modules>
+        <jpackage.input>${project.build.directory}/jpackage/input</jpackage.input>
+        <jpackage.dest>${project.build.directory}/dist</jpackage.dest>
+        <!-- overridden by the OS profiles below -->
+        <jpackage.executable>${java.home}/bin/jpackage</jpackage.executable>
+        <jpackage.icon>${project.basedir}/src/packaging/rejar.png</jpackage.icon>
+        <jpackage.platform>linux</jpackage.platform>
+        <jpackage.appImage>${app.name}</jpackage.appImage>
+        <installer.type>deb</installer.type>
+        <installer.args>--linux-shortcut --linux-menu-group Development --linux-package-name rejar</installer.args>
     </properties>
 
     <dependencies>
@@ -102,6 +118,7 @@
                                     <artifact>*:*</artifact>
                                     <excludes>
                                         <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
@@ -130,4 +147,222 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- ============================================================ OS specific packaging settings -->
+        <profile>
+            <id>os-windows</id>
+            <activation>
+                <os>
+                    <family>windows</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.executable>${java.home}/bin/jpackage.exe</jpackage.executable>
+                <jpackage.icon>${project.basedir}/src/packaging/rejar.ico</jpackage.icon>
+                <jpackage.platform>windows</jpackage.platform>
+                <installer.type>exe</installer.type>
+                <installer.args>--win-menu --win-menu-group ${app.name} --win-shortcut --win-shortcut-prompt --win-dir-chooser --win-per-user-install --win-upgrade-uuid 3f6c1a7e-2d4b-4c8e-9a51-7b0e5d2c9f14</installer.args>
+            </properties>
+        </profile>
+        <profile>
+            <id>os-mac</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                </os>
+            </activation>
+            <properties>
+                <jpackage.icon>${project.basedir}/src/packaging/rejar.icns</jpackage.icon>
+                <jpackage.platform>macos</jpackage.platform>
+                <jpackage.appImage>${app.name}.app</jpackage.appImage>
+                <installer.type>dmg</installer.type>
+                <installer.args>--mac-package-name ${app.name} --mac-package-identifier io.rejar</installer.args>
+            </properties>
+        </profile>
+
+        <!-- ============================================================ portable executable -->
+        <!-- mvn package -Pnative  ->  target/dist/ReJar/ReJar(.exe) + target/dist/ReJar-<version>-<os>.zip -->
+        <profile>
+            <id>native</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.6.2</version>
+                        <executions>
+                            <execution>
+                                <id>parse-version</id>
+                                <goals>
+                                    <goal>parse-version</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-clean-plugin</artifactId>
+                        <version>3.4.0</version>
+                        <executions>
+                            <execution>
+                                <!-- jpackage refuses to overwrite an existing image -->
+                                <id>clean-jpackage</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>clean</goal>
+                                </goals>
+                                <configuration>
+                                    <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                                    <filesets>
+                                        <fileset>
+                                            <directory>${project.build.directory}/jpackage</directory>
+                                        </fileset>
+                                        <fileset>
+                                            <directory>${jpackage.dest}/${jpackage.appImage}</directory>
+                                        </fileset>
+                                    </filesets>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage-input</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${jpackage.input}</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}</directory>
+                                            <includes>
+                                                <include>${project.build.finalName}-all.jar</include>
+                                            </includes>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.6.4</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage-app-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${jpackage.executable}</executable>
+                                    <commandlineArgs>--type app-image --name ${app.name} --app-version ${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion} --vendor ${app.vendor} --description "${app.description}" --input "${jpackage.input}" --main-jar ${project.build.finalName}-all.jar --main-class ${main.class} --icon "${jpackage.icon}" --add-modules ${jpackage.modules} --dest "${jpackage.dest}"</commandlineArgs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <version>3.8.0</version>
+                        <executions>
+                            <execution>
+                                <id>zip-app-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <descriptors>
+                                        <descriptor>src/packaging/app-image.xml</descriptor>
+                                    </descriptors>
+                                    <finalName>${app.name}-${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion}-${jpackage.platform}</finalName>
+                                    <appendAssemblyId>false</appendAssemblyId>
+                                    <outputDirectory>${jpackage.dest}</outputDirectory>
+                                    <attach>false</attach>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- ============================================================ installer -->
+        <!-- mvn package -Pinstaller  ->  target/dist/ReJar-<version>.exe (Windows, needs WiX), .deb (Linux), .dmg (macOS)
+             other types: -Dinstaller.type=msi|rpm|pkg -->
+        <profile>
+            <id>installer</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.6.2</version>
+                        <executions>
+                            <execution>
+                                <id>parse-version</id>
+                                <goals>
+                                    <goal>parse-version</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage-input</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${jpackage.input}</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}</directory>
+                                            <includes>
+                                                <include>${project.build.finalName}-all.jar</include>
+                                            </includes>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.6.4</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage-installer</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${jpackage.executable}</executable>
+                                    <commandlineArgs>--type ${installer.type} --name ${app.name} --app-version ${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.incrementalVersion} --vendor ${app.vendor} --description "${app.description}" --input "${jpackage.input}" --main-jar ${project.build.finalName}-all.jar --main-class ${main.class} --icon "${jpackage.icon}" --add-modules ${jpackage.modules} --dest "${jpackage.dest}" ${installer.args}</commandlineArgs>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
