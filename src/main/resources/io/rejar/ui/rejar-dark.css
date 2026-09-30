@@ -1,0 +1,63 @@
+/* ReJar dark theme (loaded on top of rejar.css) */
+.root {
+    -fx-base: #2b2d30;
+    -fx-background: #1e1f22;
+    -fx-control-inner-background: #1e1f22;
+    -fx-control-inner-background-alt: #232427;
+    -rj-code-bg: #1e1f22;
+    -rj-gutter-bg: #232427;
+    -rj-gutter-fg: #6f737a;
+}
+
+.code .text { -fx-fill: #bcbec4; }
+.code .caret { -fx-stroke: #ced0d6; }
+.code .selection { -fx-fill: #214283; }
+.code-editor:editing .code { -fx-background-color: #202124; }
+.code-editor:editing .code .lineno { -fx-background-color: #2e2a20; }
+
+.code .keyword    { -fx-fill: #cf8e6d; -fx-font-weight: normal; }
+.code .literal    { -fx-fill: #cf8e6d; -fx-font-weight: normal; }
+.code .string     { -fx-fill: #6aab73; }
+.code .comment    { -fx-fill: #7a7e85; }
+.code .number     { -fx-fill: #2aacb8; }
+.code .annotation { -fx-fill: #b3ae60; }
+.code .type       { -fx-fill: #bcbec4; }
+.code .method     { -fx-fill: #56a8f5; }
+.code .brace      { -fx-fill: #bcbec4; }
+.code .operator   { -fx-fill: #bcbec4; }
+.code .opcode     { -fx-fill: #cf8e6d; -fx-font-weight: normal; }
+.code .label      { -fx-fill: #c77dbb; }
+.code .tag        { -fx-fill: #d5b778; }
+.code .attr       { -fx-fill: #bababa; }
+.code .value      { -fx-fill: #6aab73; }
+.code .entity     { -fx-fill: #c77dbb; }
+.code .cdata      { -fx-fill: #7a7e85; }
+.code .prolog     { -fx-fill: #b3ae60; }
+.code .key        { -fx-fill: #cf8e6d; }
+.code .escape     { -fx-fill: #cf8e6d; }
+.code .placeholder{ -fx-fill: #f75464; }
+
+.code .diff-added   { -fx-background-color: #294436; }
+.code .diff-removed { -fx-background-color: #484a2c; }
+
+.find-bar { -fx-background-color: #2b2d30; -fx-border-color: transparent transparent #393b40 transparent; }
+.status-bar { -fx-background-color: #2b2d30; -fx-border-color: #393b40 transparent transparent transparent; }
+.status-info, .editor-info, .pending-label { -fx-text-fill: #8c9099; }
+.pending-label.has-pending { -fx-text-fill: #f0a35e; }
+
+.entry-tree .tree-cell.modified { -fx-text-fill: #f0a35e; }
+.entry-tree .tree-cell.added { -fx-text-fill: #73bd79; }
+.editor-tabs .tab.modified-tab .tab-label { -fx-text-fill: #f0a35e; }
+.list-cell.problem-error { -fx-text-fill: #f75464; }
+.list-cell.problem-warning { -fx-text-fill: #e0b150; }
+
+.search-file, .search-text { -fx-fill: #d1d3d8; }
+.search-match { -fx-fill: #f0a35e; }
+
+.table-row-cell.row-added { -fx-text-background-color: #73bd79; }
+.table-row-cell.row-deleted { -fx-text-background-color: #f75464; }
+.table-row-cell.row-modified { -fx-text-background-color: #f0a35e; }
+
+.image-holder {
+    -fx-background-color: linear-gradient(from 0px 0px to 16px 16px, repeat, #2b2b2b 50%, #333333 50%);
+}

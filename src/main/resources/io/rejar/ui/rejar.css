@@ -1,0 +1,153 @@
+/* ReJar light theme */
+.root {
+    -rj-code-bg: #ffffff;
+    -rj-gutter-bg: #f4f5f7;
+    -rj-gutter-fg: #9aa0a8;
+    -rj-accent: #3574f0;
+    -fx-accent: #3574f0;
+    -fx-focus-color: #3574f0;
+    -fx-font-size: 12.5px;
+}
+
+/* ---------------------------------------------------------------- code */
+.code {
+    -fx-background-color: -rj-code-bg;
+}
+.code .text { -fx-fill: #1f2328; }
+.code .caret { -fx-stroke: #1f2328; }
+.code .selection { -fx-fill: #b3d4fc; }
+.code .lineno {
+    -fx-background-color: -rj-gutter-bg;
+    -fx-text-fill: -rj-gutter-fg;
+    -fx-padding: 0 8 0 6;
+}
+.code-editor:editing .code { -fx-background-color: #fffdf5; }
+.code-editor:editing .code .lineno { -fx-background-color: #f7efd6; }
+
+.code .keyword    { -fx-fill: #0033b3; -fx-font-weight: bold; }
+.code .literal    { -fx-fill: #0033b3; -fx-font-weight: bold; }
+.code .string     { -fx-fill: #067d17; }
+.code .comment    { -fx-fill: #8c8c8c; -fx-font-style: italic; }
+.code .number     { -fx-fill: #1750eb; }
+.code .annotation { -fx-fill: #9e880d; }
+.code .type       { -fx-fill: #00627a; }
+.code .method     { -fx-fill: #00627a; }
+.code .brace      { -fx-fill: #5a5a5a; }
+.code .operator   { -fx-fill: #5a5a5a; }
+.code .opcode     { -fx-fill: #0033b3; -fx-font-weight: bold; }
+.code .label      { -fx-fill: #871094; }
+.code .tag        { -fx-fill: #0033b3; }
+.code .attr       { -fx-fill: #174ad4; }
+.code .value      { -fx-fill: #067d17; }
+.code .entity     { -fx-fill: #871094; }
+.code .cdata      { -fx-fill: #6d6d6d; }
+.code .prolog     { -fx-fill: #9e880d; }
+.code .key        { -fx-fill: #871094; }
+.code .escape     { -fx-fill: #0037a6; }
+.code .placeholder{ -fx-fill: #c7222d; }
+
+.code .diff-added   { -fx-background-color: #dcfce2; }
+.code .diff-removed { -fx-background-color: #fde2e2; }
+
+.find-bar {
+    -fx-background-color: #f0f2f5;
+    -fx-border-color: transparent transparent #d0d4da transparent;
+}
+
+/* ---------------------------------------------------------------- chrome */
+.status-bar {
+    -fx-background-color: #eef0f3;
+    -fx-border-color: #d0d4da transparent transparent transparent;
+}
+.status-info { -fx-text-fill: #6b7280; }
+.editor-info { -fx-text-fill: #6b7280; }
+.section-title { -fx-font-weight: bold; }
+.warning-text { -fx-text-fill: #b45309; }
+
+.button.accent {
+    -fx-base: #3574f0;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.placeholder-title { -fx-font-size: 34px; -fx-font-weight: bold; -fx-text-fill: #9aa0a8; }
+.placeholder-hint { -fx-font-size: 14px; -fx-text-fill: #9aa0a8; }
+.welcome-title { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #8a9099; }
+.welcome-line { -fx-text-fill: #8a9099; -fx-font-size: 13px; }
+
+.pending-label { -fx-text-fill: #6b7280; -fx-padding: 0 6 0 6; -fx-cursor: hand; }
+.pending-label.has-pending { -fx-text-fill: #c2410c; -fx-font-weight: bold; }
+
+.console {
+    -fx-font-size: 12px;
+}
+
+/* ---------------------------------------------------------------- tree */
+.entry-tree .tree-cell.modified { -fx-text-fill: #c2410c; -fx-font-weight: bold; }
+.entry-tree .tree-cell.added { -fx-text-fill: #15803d; -fx-font-weight: bold; }
+.entry-tree .tree-cell:selected.modified,
+.entry-tree .tree-cell:selected.added { -fx-text-fill: white; }
+
+.badge {
+    -fx-min-width: 15px;
+    -fx-min-height: 15px;
+    -fx-max-width: 15px;
+    -fx-max-height: 15px;
+    -fx-alignment: center;
+    -fx-background-radius: 8px;
+    -fx-text-fill: white;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+}
+.badge-class { -fx-background-color: #3574f0; }
+.badge-jar { -fx-background-color: #a0662d; }
+.badge-root { -fx-background-color: #6b4fbb; }
+
+.icon {
+    -fx-min-width: 14px;
+    -fx-min-height: 12px;
+    -fx-max-width: 14px;
+    -fx-max-height: 12px;
+}
+.icon-folder {
+    -fx-shape: "M0,1 L5,1 L7,3 L14,3 L14,12 L0,12 Z";
+    -fx-background-color: #e8a33d;
+}
+.icon-file {
+    -fx-min-width: 11px;
+    -fx-max-width: 11px;
+    -fx-min-height: 13px;
+    -fx-max-height: 13px;
+    -fx-shape: "M0,0 L7,0 L11,4 L11,13 L0,13 Z";
+    -fx-background-color: #9aa3ad;
+}
+
+/* ---------------------------------------------------------------- tabs */
+.editor-tabs .tab.modified-tab .tab-label { -fx-text-fill: #c2410c; }
+
+/* ---------------------------------------------------------------- problems */
+.problems { -fx-border-color: #d0d4da transparent transparent transparent; }
+.list-cell.problem-error { -fx-text-fill: #b91c1c; }
+.list-cell.problem-warning { -fx-text-fill: #a16207; }
+.list-cell.problem-error:selected, .list-cell.problem-warning:selected { -fx-text-fill: white; }
+
+/* ---------------------------------------------------------------- search */
+.search-file { -fx-font-weight: bold; -fx-fill: #1f2328; }
+.search-kind { -fx-fill: #8a9099; }
+.search-line { -fx-fill: #8a9099; }
+.search-text { -fx-fill: #1f2328; }
+.search-match { -fx-fill: #b45309; -fx-font-weight: bold; }
+.tree-cell:selected .search-file, .tree-cell:selected .search-text,
+.tree-cell:selected .search-line, .tree-cell:selected .search-kind { -fx-fill: white; }
+.tree-cell:selected .search-match { -fx-fill: #ffe08a; }
+
+/* ---------------------------------------------------------------- changes */
+.table-row-cell.row-added { -fx-text-background-color: #15803d; }
+.table-row-cell.row-deleted { -fx-text-background-color: #b91c1c; }
+.table-row-cell.row-modified { -fx-text-background-color: #c2410c; }
+.table-row-cell:selected { -fx-text-background-color: white; }
+.tree-cell.history-set { -fx-font-weight: bold; }
+
+.image-holder {
+    -fx-background-color: linear-gradient(from 0px 0px to 16px 16px, repeat, #f3f3f3 50%, #e6e6e6 50%);
+}
