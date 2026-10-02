@@ -208,6 +208,52 @@ class JarRoundTripTest {
     }
 
     @Test
+    void sourceJarHoldsDecompiledAndEditedSources() throws Exception {
+        Path jar = buildJar("BOOT-INF/classes/");
+        Path sources = tmp.resolve(SourceJarWriter.defaultName(jar.getFileName().toString()));
+        assertEquals("boot-sources.jar", sources.getFileName().toString());
+        try (JarModel model = JarModel.open(jar)) {
+            DecompilerService decompiler = new DecompilerService(model);
+            ClassUnit unit = model.unit("BOOT-INF/classes/demo/Greeter");
+            String source = decompiler.decompile(unit);
+            String edited = source.replace("\"Hello \"", "\"Hi \"");
+            SourceCompiler.Result result = new SourceCompiler().compile(unit.className(), edited,
+                    new ClasspathBuilder(model).build(new ClasspathConfig()), 17, List.of());
+            assertTrue(result.success(), result.problems().toString());
+            model.applyCompiled(unit, result.classes(), edited, source, 17);
+
+            assertThrows(IOException.class, () -> SourceJarWriter.write(model, decompiler, jar, (d, t) -> {
+            }, new AtomicBoolean()));
+            SourceJarWriter.Result cancelled = SourceJarWriter.write(model, decompiler, sources, (d, t) -> {
+            }, new AtomicBoolean(true));
+            assertTrue(cancelled.cancelled());
+            assertFalse(Files.exists(sources), "a cancelled run must not leave a jar behind");
+            try (var files = Files.list(tmp)) {
+                assertTrue(files.noneMatch(f -> f.getFileName().toString().endsWith(".tmp")));
+            }
+
+            List<Integer> progress = new ArrayList<>();
+            SourceJarWriter.Result written = SourceJarWriter.write(model, decompiler, sources, (d, t) -> {
+                synchronized (progress) {
+                    progress.add(d * 10 + t);
+                }
+            }, new AtomicBoolean());
+            assertFalse(written.cancelled());
+            assertEquals(2, written.sources());
+            assertEquals(List.of(12, 22), progress.stream().sorted().toList());
+        }
+        try (JarFile jf = new JarFile(sources.toFile())) {
+            assertNotNull(jf.getManifest());
+            List<String> names = jf.stream().map(ZipEntry::getName).filter(n -> n.endsWith(".java")).sorted().toList();
+            assertEquals(List.of("demo/Greeter.java", "demo/Main.java"), names);
+            String greeter = new String(jf.getInputStream(jf.getEntry("demo/Greeter.java")).readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(greeter.contains("\"Hi \""), greeter);
+            String main = new String(jf.getInputStream(jf.getEntry("demo/Main.java")).readAllBytes(), StandardCharsets.UTF_8);
+            assertTrue(main.contains("class Main"), main);
+        }
+    }
+
+    @Test
     void signedManifestLosesDigests() throws IOException {
         String manifest = "Manifest-Version: 1.0\r\nMain-Class: demo.Main\r\n\r\nName: demo/Main.class\r\nSHA-256-Digest: abc=\r\n\r\n";
         String out = new String(JarWriter.unsignedManifest(manifest.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);

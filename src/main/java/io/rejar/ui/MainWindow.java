@@ -129,13 +129,14 @@ public final class MainWindow {
         MenuItem open = item("_Open JAR…", "Shortcut+O", this::chooseAndOpen);
         rebuildRecentMenu();
         MenuItem save = item("_Save as New JAR…", "Shortcut+Shift+S", () -> withJar(JarTab::saveAsNewJar));
+        MenuItem sourceJar = item("Create Source _JAR…", null, () -> withJar(JarTab::createSourceJar));
         MenuItem close = item("_Close JAR", "Shortcut+Shift+W", () -> withJar(t -> closeJarTab(t)));
         MenuItem exit = item("E_xit", null, () -> {
             if (confirmDiscard(jarTabs(), "Quit ReJar")) {
                 Platform.exit();
             }
         });
-        Menu file = new Menu("_File", null, open, recentMenu, new SeparatorMenuItem(), save, close,
+        Menu file = new Menu("_File", null, open, recentMenu, new SeparatorMenuItem(), save, sourceJar, close,
                 new SeparatorMenuItem(), exit);
 
         MenuItem search = item("_Search in JAR…", "Shortcut+Shift+F", () -> withJar(JarTab::showSearch));

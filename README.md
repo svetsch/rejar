@@ -8,6 +8,7 @@ ReJar is a desktop tool (JavaFX 21.0.12) for decompiling jar files and patching 
 - **Search.** You can search the decompiled sources, the text resources and the entry names. Options: case-sensitive, whole word, regex. Results are grouped by file; double-click one to open it at the matching line. In-file find is Ctrl+F / F3 and go-to-line is Ctrl+G.
 - **Edit and recompile.** Click *Edit* (Ctrl+E), change the source, then click *Compile & Apply* (Ctrl+S). `javac` compiles the source in memory. Its `--release` is taken from the original class file version. Compiler errors are listed and clickable. The new class files replace the old ones, and nested classes that no longer exist are removed. *Compare* shows the originally decompiled source next to the edited one.
 - **Save to a new jar.** *Save as New JAR* (Ctrl+Shift+S) never overwrites the opened jar. It keeps the entry order and the compression method of each entry (so STORED nested jars in Spring Boot stay valid). If the jar was signed, the signature is removed.
+- **Source jar.** *Create Source JAR* decompiles every class into `<name>-sources.jar` (`.java` files under their package path, pending edits included), ready to attach as sources in an IDE.
 - **History and revert.** The new jar records every change set under `META-INF/rejar/`:
   ```
   META-INF/rejar/history.json                          change sets: id, date, user, description, entries, sha-256

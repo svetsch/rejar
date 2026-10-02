@@ -11,10 +11,10 @@ import io.rejar.core.JarWriter;
 import io.rejar.core.MavenResolver;
 import io.rejar.core.SearchService;
 import io.rejar.core.SourceCompiler;
+import io.rejar.core.SourceJarWriter;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -25,9 +25,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -35,12 +32,12 @@ import java.util.jar.Attributes;
 import java.util.jar.Manifest;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
+import javafx.application.Platform;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 import javafx.scene.control.Separator;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
@@ -87,6 +84,13 @@ final class JarTab extends Tab {
     private final Label summary = new Label();
     private final Label pendingLabel = new Label();
     private final Button saveButton = new Button("Save as New JAR…");
+    private final Button sourceJarButton = new Button("Create Source JAR…");
+    private final ProgressBar sourceJarProgress = new ProgressBar(0);
+    private final Label sourceJarLabel = new Label();
+    private final Button sourceJarCancel = new Button("Cancel");
+    private final HBox sourceJarStatus = new HBox(6, sourceJarProgress, sourceJarLabel, sourceJarCancel);
+    /** Cancel flag of the running source jar creation, null when none is running. */
+    private AtomicBoolean sourceJarRun;
     private final VBox welcome = new VBox(8);
     private final Consumer<Set<String>> modelListener = paths -> Fx.runLater(() -> modelChanged(paths));
     private Map<String, ClassUnit> fqcnIndex;
@@ -145,16 +149,21 @@ final class JarTab extends Tab {
         Button classpath = new Button("Classpath…");
         classpath.setTooltip(new Tooltip("Compilation classpath: jar content, nested jars, Maven dependencies, custom jars"));
         classpath.setOnAction(e -> editClasspath());
-        Button export = new Button("Export Sources…");
-        export.setTooltip(new Tooltip("Decompile every class into a zip of .java files"));
-        export.setOnAction(e -> exportSources());
+        sourceJarButton.setTooltip(new Tooltip("Decompile every class into a -sources.jar of .java files"));
+        sourceJarButton.setOnAction(e -> createSourceJar());
+        sourceJarProgress.setPrefWidth(140);
+        sourceJarLabel.getStyleClass().add("editor-info");
+        sourceJarCancel.setOnAction(e -> cancelSourceJar());
+        sourceJarStatus.setAlignment(Pos.CENTER_LEFT);
+        sourceJarStatus.setVisible(false);
+        sourceJarStatus.managedProperty().bind(sourceJarStatus.visibleProperty());
         pendingLabel.getStyleClass().add("pending-label");
         pendingLabel.setOnMouseClicked(e -> showChanges());
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         summary.getStyleClass().add("editor-info");
         ToolBar toolbar = new ToolBar(saveButton, pendingLabel, new Separator(), gotoClass, search, new Separator(),
-                classpath, export, spacer, summary);
+                classpath, sourceJarButton, sourceJarStatus, spacer, summary);
 
         BorderPane root = new BorderPane(horizontal);
         root.setTop(toolbar);
@@ -748,6 +757,7 @@ final class JarTab extends Tab {
             }
         }
         searchPane.cancel();
+        cancelSourceJar();
         Fx.run(() -> JarModel.open(file), newModel -> {
             JarModel old = model;
             editors.getTabs().clear();
@@ -901,59 +911,79 @@ final class JarTab extends Tab {
         }
     }
 
-    /** Decompiles every class of the jar into a zip of sources. */
-    void exportSources() {
+    /** Decompiles every class of the jar (pending edits included) into a {@code -sources.jar}. */
+    void createSourceJar() {
+        if (sourceJarRun != null) {
+            return;
+        }
         FileChooser chooser = new FileChooser();
-        chooser.setTitle("Export decompiled sources");
-        String base = model.name().replaceFirst("\\.[^.]+$", "");
-        chooser.setInitialFileName(base + "-sources.zip");
+        chooser.setTitle("Create source JAR");
+        chooser.setInitialFileName(SourceJarWriter.defaultName(model.name()));
         chooser.setInitialDirectory(model.file().getParent().toFile());
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Zip", "*.zip", "*.jar"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Source JAR", "*.jar", "*.zip"));
         File file = chooser.showSaveDialog(main.stage());
         if (file == null) {
             return;
         }
-        List<ClassUnit> units = new ArrayList<>(model.units().values());
-        main.busy("Exporting sources…");
+        AtomicBoolean cancel = new AtomicBoolean();
+        sourceJarRun = cancel;
+        sourceJarButton.setDisable(true);
+        sourceJarCancel.setDisable(false);
+        sourceJarProgress.setProgress(0);
+        sourceJarLabel.setText("0 / " + model.units().size() + " classes");
+        sourceJarStatus.setVisible(true);
+        main.setStatus("Creating source JAR " + file.getName() + "…");
+        JarModel m = model;
         DecompilerService dec = decompiler;
-        Fx.run(() -> {
-            AtomicInteger done = new AtomicInteger();
-            ExecutorService pool = Executors.newFixedThreadPool(Math.max(1, Runtime.getRuntime().availableProcessors() - 1));
-            try (ZipOutputStream out = new ZipOutputStream(Files.newOutputStream(file.toPath()))) {
-                List<Future<?>> futures = new ArrayList<>();
-                Set<String> written = new java.util.HashSet<>();
-                for (ClassUnit unit : units) {
-                    futures.add(pool.submit(() -> {
-                        String source = dec.sourceOf(unit);
-                        String name = unit.prefix().startsWith("META-INF/versions/") ? unit.prefix() + unit.sourcePath() : unit.sourcePath();
-                        synchronized (out) {
-                            if (written.add(name)) {
-                                out.putNextEntry(new ZipEntry(name));
-                                out.write(source.getBytes(StandardCharsets.UTF_8));
-                                out.closeEntry();
-                            }
-                        }
-                        int d = done.incrementAndGet();
-                        if (d % 25 == 0) {
-                            main.setStatus("Exporting sources " + d + "/" + units.size());
-                        }
-                        return null;
-                    }));
-                }
-                for (Future<?> f : futures) {
-                    f.get();
-                }
-            } finally {
-                pool.shutdownNow();
+        // workers report every class: only the latest value is pushed to the FX thread
+        AtomicInteger latest = new AtomicInteger();
+        AtomicBoolean scheduled = new AtomicBoolean();
+        Fx.run(() -> SourceJarWriter.write(m, dec, file.toPath(), (done, total) -> {
+            latest.accumulateAndGet(done, Math::max);
+            if (scheduled.compareAndSet(false, true)) {
+                Platform.runLater(() -> {
+                    scheduled.set(false);
+                    if (sourceJarRun == cancel && !cancel.get()) {
+                        sourceJarProgress.setProgress((double) latest.get() / total);
+                        sourceJarLabel.setText(latest.get() + " / " + total + " classes");
+                    }
+                });
             }
-            return units.size();
-        }, count -> {
-            main.idle("Exported " + count + " source files to " + file);
-            log("Exported " + count + " decompiled sources to " + file);
+        }, cancel), result -> {
+            sourceJarFinished(cancel);
+            if (result.cancelled()) {
+                main.setStatus("Source JAR creation cancelled");
+                log("Source jar creation cancelled: " + result.target() + " was not written");
+            } else {
+                main.setStatus("Source JAR written: " + result.target());
+                log("Created source jar " + result.target() + " (" + result.sources() + " source files)");
+            }
         }, error -> {
-            main.idle("Export failed");
-            Fx.error(main.stage(), "Export failed", error);
+            sourceJarFinished(cancel);
+            if (cancel.get()) {
+                // the jar was closed while its classes were being read
+                main.setStatus("Source JAR creation cancelled");
+                return;
+            }
+            main.setStatus("Source JAR creation failed");
+            Fx.error(main.stage(), "Cannot create the source JAR", error);
         });
+    }
+
+    private void cancelSourceJar() {
+        if (sourceJarRun != null && sourceJarRun.compareAndSet(false, true)) {
+            sourceJarCancel.setDisable(true);
+            sourceJarProgress.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+            sourceJarLabel.setText("Cancelling…");
+        }
+    }
+
+    private void sourceJarFinished(AtomicBoolean run) {
+        if (sourceJarRun == run) {
+            sourceJarRun = null;
+            sourceJarButton.setDisable(false);
+            sourceJarStatus.setVisible(false);
+        }
     }
 
     // ------------------------------------------------------------------ misc
@@ -986,6 +1016,7 @@ final class JarTab extends Tab {
 
     void dispose() {
         searchPane.cancel();
+        cancelSourceJar();
         model.removeChangeListener(modelListener);
         if (libraryLookup != null) {
             libraryLookup.close();
